@@ -1,5 +1,5 @@
 import { query } from '../config/database';
-import { RowDataPacket, ResultSetHeader } from 'mysql2';
+
 
 export interface Vehicle {
   vehicle_id?: number;
@@ -24,59 +24,63 @@ export async function getAllVehicles() {
   `);
 }
 
+// Obtener vehículo por ID
 export async function getVehicleById(id: number) {
   const results = await query(`
     SELECT v.*, c.name as customer_name 
     FROM vehicles v
     JOIN customers c ON v.customer_id = c.customer_id
-    WHERE v.vehicle_id = ?
-  `, [id]) as RowDataPacket[];
+    WHERE v.vehicle_id = $1
+  `, [id]);
   
   return results.length > 0 ? results[0] : null;
 }
 
+// Obtener vehículos por cliente
 export async function getVehiclesByCustomer(customerId: number) {
-  return query('SELECT * FROM vehicles WHERE customer_id = ?', [customerId]);
+  return query('SELECT * FROM vehicles WHERE customer_id = $1', [customerId]);
 }
 
+// Buscar vehículos
 export async function searchVehicles(searchTerm: string) {
   const term = `%${searchTerm}%`;
   return query(`
     SELECT v.*, c.name as customer_name 
     FROM vehicles v
     JOIN customers c ON v.customer_id = c.customer_id
-    WHERE v.make LIKE ? OR v.model LIKE ? OR v.license_plate LIKE ? 
-    OR v.vin LIKE ? OR c.name LIKE ?
+    WHERE v.make LIKE $1 OR v.model LIKE $2 OR v.license_plate LIKE $3 
+    OR v.vin LIKE $4 OR c.name LIKE $5
   `, [term, term, term, term, term]);
 }
 
+// Crear vehículo
 export async function createVehicle(vehicle: Vehicle) {
-  // Convertir valores undefined a null para la base de datos
   const vin = vehicle.vin === undefined ? null : vehicle.vin;
   const color = vehicle.color === undefined ? null : vehicle.color;
   const last_service_date = vehicle.last_service_date === undefined ? null : vehicle.last_service_date;
   
   const result = await query(
-    'INSERT INTO vehicles (customer_id, make, model, year, license_plate, vin, color, last_service_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    'INSERT INTO vehicles (customer_id, make, model, year, license_plate, vin, color, last_service_date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
     [
       vehicle.customer_id,
       vehicle.make,
       vehicle.model,
       vehicle.year,
       vehicle.license_plate,
-      vin,          // Usamos null en lugar de undefined
-      color,        // Usamos null en lugar de undefined
-      last_service_date  // Usamos null en lugar de undefined
+      vin,
+      color,
+      last_service_date
     ]
-  ) as ResultSetHeader;
+  );
   
-  return { ...vehicle, vehicle_id: result.insertId };
+  return result[0];
 }
 
+// Actualizar vehículo
 export async function updateVehicle(id: number, vehicle: Partial<Vehicle>) {
   const fieldsToUpdate = Object.keys(vehicle)
     .filter(key => key !== 'vehicle_id' && key !== 'created_at')
-    .map(key => `${key} = ?`);
+    .map((key, index) => `${key} = $${index + 1}`);
   
   const valuesToUpdate = Object.keys(vehicle)
     .filter(key => key !== 'vehicle_id' && key !== 'created_at')
@@ -87,13 +91,14 @@ export async function updateVehicle(id: number, vehicle: Partial<Vehicle>) {
   }
 
   await query(
-    `UPDATE vehicles SET ${fieldsToUpdate.join(', ')} WHERE vehicle_id = ?`,
+    `UPDATE vehicles SET ${fieldsToUpdate.join(', ')} WHERE vehicle_id = $${valuesToUpdate.length + 1}`,
     [...valuesToUpdate, id]
   );
   
   return getVehicleById(id);
 }
 
+// Eliminar vehículo
 export async function deleteVehicle(id: number) {
-  return query('DELETE FROM vehicles WHERE vehicle_id = ?', [id]);
+  return query('DELETE FROM vehicles WHERE vehicle_id = $1', [id]);
 }

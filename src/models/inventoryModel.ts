@@ -1,6 +1,6 @@
 // src/models/inventory.ts
 import { query } from '../config/database';
-import { ResultSetHeader, RowDataPacket } from 'mysql2';
+
 
 export interface InventoryItem {
   item_id?: number;
@@ -42,49 +42,41 @@ export async function getAllInventoryItems() {
   `);
 }
 
-// Get a single inventory item by ID
+// Obtener un item de inventario por ID
 export async function getInventoryItemById(id: number) {
   const results = await query(
-    'SELECT * FROM inventory WHERE item_id = ?', 
+    'SELECT * FROM inventory WHERE item_id = $1', 
     [id]
-  ) as RowDataPacket[];
+  );
   
   return results.length > 0 ? results[0] : null;
 }
 
-// Get items with low stock
-export async function getLowStockItems() {
-  return query(`
-    SELECT * FROM inventory
-    WHERE quantity <= reorder_level
-    ORDER BY (quantity / reorder_level) ASC
-  `);
-}
-
-// Get items by category
+// Obtener items por categoría
 export async function getItemsByCategory(category: string) {
   return query(
-    'SELECT * FROM inventory WHERE category = ? ORDER BY name ASC',
+    'SELECT * FROM inventory WHERE category = $1 ORDER BY name ASC',
     [category]
   );
 }
 
-// Search inventory items
+// Buscar items de inventario
 export async function searchInventoryItems(searchTerm: string) {
   const term = `%${searchTerm}%`;
   return query(
-    'SELECT * FROM inventory WHERE name LIKE ? OR description LIKE ? OR category LIKE ?',
+    'SELECT * FROM inventory WHERE name LIKE $1 OR description LIKE $2 OR category LIKE $3',
     [term, term, term]
   );
 }
 
-// Create a new inventory item
+// Crear un nuevo item de inventario
 export async function createInventoryItem(item: InventoryItem) {
   const result = await query(
     `INSERT INTO inventory (
       name, description, category, quantity, unit, 
       cost_price, selling_price, reorder_level
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    RETURNING *`,
     [
       item.name,
       item.description,
@@ -95,20 +87,21 @@ export async function createInventoryItem(item: InventoryItem) {
       item.selling_price,
       item.reorder_level
     ]
-  ) as ResultSetHeader;
+  );
   
-  return getInventoryItemById(result.insertId);
+  return result.length > 0 ? result[0] : null;
 }
 
-// Update an inventory item
+// Actualizar un item de inventario
 export async function updateInventoryItem(id: number, item: Partial<InventoryItem>) {
   const fields = [];
   const values = [];
+  let paramIndex = 1;
   
   // Dynamically build update fields
   for (const [key, value] of Object.entries(item)) {
     if (key !== 'item_id' && key !== 'created_at' && key !== 'updated_at') {
-      fields.push(`${key} = ?`);
+      fields.push(`${key} = $${paramIndex++}`);
       values.push(value);
     }
   }
@@ -117,21 +110,21 @@ export async function updateInventoryItem(id: number, item: Partial<InventoryIte
     return { error: 'No fields to update' };
   }
   
-  fields.push('updated_at = CURRENT_TIMESTAMP');
+  fields.push(`updated_at = CURRENT_TIMESTAMP`);
   values.push(id);
   
   await query(
-    `UPDATE inventory SET ${fields.join(', ')} WHERE item_id = ?`,
+    `UPDATE inventory SET ${fields.join(', ')} WHERE item_id = $${paramIndex}`,
     values
   );
   
   return getInventoryItemById(id);
 }
 
-// Adjust inventory quantity
+// Ajustar cantidad de inventario
 export async function adjustInventoryQuantity(id: number, adjustment: number) {
   // First check if the adjustment would result in negative quantity
-  const item = await getInventoryItemById(id) as InventoryItem;
+  const item = await getInventoryItemById(id);
   
   if (!item) {
     return { error: 'Item not found' };
@@ -144,14 +137,14 @@ export async function adjustInventoryQuantity(id: number, adjustment: number) {
   }
   
   await query(
-    'UPDATE inventory SET quantity = quantity + ?, updated_at = CURRENT_TIMESTAMP WHERE item_id = ?',
+    'UPDATE inventory SET quantity = quantity + $1, updated_at = CURRENT_TIMESTAMP WHERE item_id = $2',
     [adjustment, id]
   );
   
   return getInventoryItemById(id);
 }
 
-// Delete an inventory item
+// Eliminar un item de inventario
 export async function deleteInventoryItem(id: number) {
   // First check if the item exists
   const item = await getInventoryItemById(id);
@@ -160,15 +153,15 @@ export async function deleteInventoryItem(id: number) {
     return { error: 'Item not found' };
   }
   
-  await query('DELETE FROM inventory WHERE item_id = ?', [id]);
+  await query('DELETE FROM inventory WHERE item_id = $1', [id]);
   
   return { message: 'Item deleted successfully' };
 }
 
-// Record inventory usage
+// Registrar uso de inventario
 export async function recordInventoryUsage(usage: InventoryUsage) {
   // First check if there's enough inventory
-  const item = await getInventoryItemById(usage.item_id) as InventoryItem;
+  const item = await getInventoryItemById(usage.item_id);
   
   if (!item) {
     return { error: 'Item not found' };
@@ -178,13 +171,13 @@ export async function recordInventoryUsage(usage: InventoryUsage) {
     return { error: 'Not enough stock available', current_stock: item.quantity };
   }
   
-  // Begin transaction
-  await query('START TRANSACTION');
+  // Begin transaction - note: in PostgreSQL we'll need to adapt this
+  await query('BEGIN');
   
   try {
     // Reduce inventory quantity
     await query(
-      'UPDATE inventory SET quantity = quantity - ?, updated_at = CURRENT_TIMESTAMP WHERE item_id = ?',
+      'UPDATE inventory SET quantity = quantity - $1, updated_at = CURRENT_TIMESTAMP WHERE item_id = $2',
       [usage.quantity, usage.item_id]
     );
     
@@ -192,7 +185,8 @@ export async function recordInventoryUsage(usage: InventoryUsage) {
     const result = await query(
       `INSERT INTO inventory_usage (
         item_id, service_id, quantity, employee_id, usage_date, notes
-      ) VALUES (?, ?, ?, ?, ?, ?)`,
+      ) VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *`,
       [
         usage.item_id,
         usage.service_id || null,
@@ -201,21 +195,18 @@ export async function recordInventoryUsage(usage: InventoryUsage) {
         usage.usage_date,
         usage.notes || null
       ]
-    ) as ResultSetHeader;
+    );
     
     await query('COMMIT');
     
-    return {
-      usage_id: result.insertId,
-      ...usage
-    };
+    return result[0];
   } catch (error) {
     await query('ROLLBACK');
     throw error;
   }
 }
 
-// Get usage history for an item
+// Obtener historial de uso para un item
 export async function getInventoryUsageHistory(itemId: number) {
   return query(`
     SELECT u.*, 
@@ -226,30 +217,7 @@ export async function getInventoryUsageHistory(itemId: number) {
     JOIN inventory i ON u.item_id = i.item_id
     LEFT JOIN employees e ON u.employee_id = e.employee_id
     LEFT JOIN services s ON u.service_id = s.service_id
-    WHERE u.item_id = ?
+    WHERE u.item_id = $1
     ORDER BY u.usage_date DESC
   `, [itemId]);
-}
-
-// Get all inventory usage records
-export async function getAllInventoryUsage(limit = 100) {
-  return query(`
-    SELECT u.*, 
-           i.name as item_name, 
-           e.name as employee_name,
-           s.name as service_name
-    FROM inventory_usage u
-    JOIN inventory i ON u.item_id = i.item_id
-    LEFT JOIN employees e ON u.employee_id = e.employee_id
-    LEFT JOIN services s ON u.service_id = s.service_id
-    ORDER BY u.usage_date DESC
-    LIMIT ?
-  `, [limit]);
-}
-
-// Get all inventory categories
-export async function getAllCategories() {
-  return query(`
-    SELECT DISTINCT category FROM inventory ORDER BY category
-  `);
 }

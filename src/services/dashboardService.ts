@@ -1,5 +1,6 @@
 import { query } from '../config/database';
 
+// Obtener estadísticas del dashboard
 export async function getDashboardStats() {
   // Vehículos pendientes
   const pendingVehicles = await query(`
@@ -17,7 +18,7 @@ export async function getDashboardStats() {
 
   // Tiempo promedio de servicio
   const avgServiceTime = await query(`
-    SELECT AVG(TIMESTAMPDIFF(MINUTE, entry_time, estimated_completion_time)) as avg_time 
+    SELECT AVG(EXTRACT(EPOCH FROM (estimated_completion_time - entry_time))/60) as avg_time 
     FROM pending_services
   `);
 
@@ -56,7 +57,7 @@ export async function getDashboardStats() {
       reorder_level 
     FROM inventory 
     WHERE quantity <= reorder_level
-    ORDER BY (quantity / reorder_level) ASC
+    ORDER BY (quantity::float / reorder_level) ASC
     LIMIT 3
   `);
 
