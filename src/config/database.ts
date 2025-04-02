@@ -8,7 +8,8 @@ dotenv.config();
 if (!process.env.DATABASE_URL) {
   console.error('ERROR: La variable DATABASE_URL no está definida en el archivo .env');
   console.error('Por favor, crea un archivo .env con la variable DATABASE_URL');
-  process.exit(1); // Detener la aplicación si no hay URL de base de datos
+  // En lugar de process.exit(1), simplemente mostramos un error
+  console.error('La aplicación podría fallar sin una URL de base de datos válida');
 }
 
 console.log('Conectando a la base de datos...');
