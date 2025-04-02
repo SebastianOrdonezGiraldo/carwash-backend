@@ -1,6 +1,5 @@
-// src/models/inventory.ts
+// src/models/inventoryModel.ts
 import { query } from '../config/database';
-
 
 export interface InventoryItem {
   item_id?: number;
@@ -50,6 +49,15 @@ export async function getInventoryItemById(id: number) {
   );
   
   return results.length > 0 ? results[0] : null;
+}
+
+// Obtener items con bajo stock
+export async function getLowStockItems() {
+  return query(`
+    SELECT * FROM inventory 
+    WHERE quantity <= reorder_level 
+    ORDER BY (quantity::float / reorder_level) ASC
+  `);
 }
 
 // Obtener items por categoría
@@ -220,4 +228,28 @@ export async function getInventoryUsageHistory(itemId: number) {
     WHERE u.item_id = $1
     ORDER BY u.usage_date DESC
   `, [itemId]);
+}
+
+// Obtener todos los registros de uso de inventario
+export async function getAllInventoryUsage(limit: number = 100) {
+  return query(`
+    SELECT u.*, 
+           i.name as item_name, 
+           e.name as employee_name,
+           s.name as service_name
+    FROM inventory_usage u
+    JOIN inventory i ON u.item_id = i.item_id
+    LEFT JOIN employees e ON u.employee_id = e.employee_id
+    LEFT JOIN services s ON u.service_id = s.service_id
+    ORDER BY u.usage_date DESC
+    LIMIT $1
+  `, [limit]);
+}
+
+// Obtener todas las categorías de inventario
+export async function getAllCategories() {
+  return query(`
+    SELECT DISTINCT category FROM inventory
+    ORDER BY category
+  `);
 }

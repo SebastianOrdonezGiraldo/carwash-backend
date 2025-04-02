@@ -1,5 +1,5 @@
-// src/server.ts (actualización)
-import express from 'express';
+// src/server.ts
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { testConnection } from './config/database';
@@ -10,14 +10,14 @@ import vehicleRoutes from './routes/vehicleRoutes';
 import serviceRoutes from './routes/serviceRoutes';
 import employeeRoutes from './routes/employeeRoutes';
 import pendingServiceRoutes from './routes/pendingServiceRoutes';
-import inventoryRoutes from './routes/inventoryRoutes'; // Nueva importación
+import inventoryRoutes from './routes/inventoryRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
 
 // Configurar dotenv
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 
 // Middleware
 app.use(cors());
@@ -37,11 +37,11 @@ app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/pending-services', pendingServiceRoutes);
-app.use('/api/inventory', inventoryRoutes); // Nueva ruta
+app.use('/api/inventory', inventoryRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
 // Ruta de prueba
-app.get('/', (req, res) => {
+app.get('/', (req: Request, res: Response) => {
   res.send('API de Car Wash Pro funcionando correctamente');
 });
 

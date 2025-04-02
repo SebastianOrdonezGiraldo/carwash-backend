@@ -1,6 +1,5 @@
 import { query } from '../config/database';
 
-
 export interface ServiceOffer {
   service_id?: number;
   name: string;
@@ -42,6 +41,14 @@ export async function getServicesByCategory(categoryId: number) {
     WHERE s.category_id = $1
     ORDER BY s.name
   `, [categoryId]);
+}
+
+// Obtener todas las categorías de servicios
+export async function getAllServiceCategories() {
+  return query(`
+    SELECT * FROM service_categories
+    ORDER BY name
+  `);
 }
 
 // Crear servicio
