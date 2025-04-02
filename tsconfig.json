@@ -7,8 +7,11 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "typeRoots": ["./node_modules/@types", "./src/types"],
+    "lib": ["es2018", "dom"]
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "src/types/*.d.ts"],
   "exclude": ["node_modules"]
 }
