@@ -1,4 +1,3 @@
-// src/server.ts
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -12,6 +11,7 @@ import employeeRoutes from './routes/employeeRoutes';
 import pendingServiceRoutes from './routes/pendingServiceRoutes';
 import inventoryRoutes from './routes/inventoryRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
+import reportRoutes from './routes/reportRoutes';
 
 // Configurar dotenv
 dotenv.config();
@@ -39,6 +39,7 @@ app.use('/api/employees', employeeRoutes);
 app.use('/api/pending-services', pendingServiceRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Ruta de prueba
 app.get('/', (req: Request, res: Response) => {
