@@ -1,13 +1,23 @@
+// src/config/database.ts
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Verificar que la variable de entorno esté definida
+if (!process.env.DATABASE_URL) {
+  console.error('ERROR: La variable DATABASE_URL no está definida en el archivo .env');
+  console.error('Por favor, crea un archivo .env con la variable DATABASE_URL');
+  process.exit(1); // Detener la aplicación si no hay URL de base de datos
+}
+
+console.log('Conectando a la base de datos...');
+
 // Configuración de la base de datos
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false
+    rejectUnauthorized: false // Necesario para bases de datos de Render
   }
 });
 
@@ -26,11 +36,11 @@ export async function query(sql: string, params: any[] = []): Promise<any> {
 export async function testConnection(): Promise<boolean> {
   try {
     const client = await pool.connect();
-    console.log('Conexión a la base de datos exitosa');
+    console.log('✅ Conexión a la base de datos exitosa');
     client.release();
     return true;
   } catch (error) {
-    console.error('Error al conectar con la base de datos:', error);
+    console.error('❌ Error al conectar con la base de datos:', error);
     return false;
   }
 }
