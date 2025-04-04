@@ -1,5 +1,5 @@
 // src/services/serviceRatingLinkService.ts
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 import { query } from '../config/database';
 
 // Interfaz para el enlace de calificación
