@@ -1,6 +1,6 @@
 // src/services/serviceRatingLinkService.ts
-import * as crypto from 'crypto';
 import { query } from '../config/database';
+import crypto from 'crypto';
 
 // Interfaz para el enlace de calificación
 export interface ServiceRatingLink {
@@ -14,7 +14,10 @@ export interface ServiceRatingLink {
 
 // Generar un token único
 function generateUniqueToken(): string {
-  return crypto.randomBytes(32).toString('hex');
+  // Usar Web Crypto API para generar un token seguro
+  const randomBytes = new Uint8Array(32);
+  crypto.getRandomValues(randomBytes);
+  return Array.from(randomBytes, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
 // Crear un enlace de calificación
