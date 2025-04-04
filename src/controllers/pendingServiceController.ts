@@ -1,6 +1,9 @@
 // src/controllers/pendingServiceController.ts
 import { Request, Response } from 'express';
 import * as pendingServiceModel from '../models/pendingService';
+import * as ServiceRatingLinkService from '../services/serviceRatingLinkService';
+
+
 
 export async function getAllPendingServices(req: Request, res: Response) {
   try {
@@ -141,22 +144,7 @@ export async function assignServiceToEmployee(req: Request, res: Response) {
   }
 }
 
-export async function markServiceAsComplete(req: Request, res: Response) {
-  try {
-    const serviceId = Number(req.params.id);
-    
-    const result = await pendingServiceModel.markServiceAsComplete(serviceId);
-    
-    if (!result) {
-      return res.status(404).json({ error: 'Servicio no encontrado' });
-    }
-    
-    res.json(result);
-  } catch (error) {
-    console.error('Error al marcar servicio como completado:', error);
-    res.status(500).json({ error: 'Error al marcar servicio como completado' });
-  }
-}
+// Removed duplicate implementation of markServiceAsComplete
 
 export async function deletePendingService(req: Request, res: Response) {
   try {
@@ -177,5 +165,34 @@ export async function searchPendingServices(req: Request, res: Response) {
   } catch (error) {
     console.error('Error al buscar servicios pendientes:', error);
     res.status(500).json({ error: 'Error al buscar servicios pendientes' });
+  }
+}
+
+export async function markServiceAsComplete(req: Request, res: Response) {
+  try {
+    const serviceId = Number(req.params.id);
+    
+    // Marcar servicio como completado
+    const updatedService = await pendingServiceModel.markServiceAsComplete(serviceId);
+    
+    if (!updatedService) {
+      return res.status(404).json({ error: 'Servicio no encontrado' });
+    }
+
+    // Generar enlace de calificación
+    const ratingLink = await ServiceRatingLinkService.createServiceRatingLink(serviceId);
+    
+    // Construir URL de calificación 
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
+    const ratingUrl = `${frontendUrl}/rate-service/${ratingLink}`;
+
+    res.json({
+      service: updatedService,
+      ratingLink,
+      ratingUrl
+    });
+  } catch (error) {
+    console.error('Error al marcar servicio como completado:', error);
+    res.status(500).json({ error: 'Error al marcar servicio como completado' });
   }
 }

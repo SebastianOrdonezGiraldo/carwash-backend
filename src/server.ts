@@ -12,6 +12,8 @@ import pendingServiceRoutes from './routes/pendingServiceRoutes';
 import inventoryRoutes from './routes/inventoryRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
 import reportRoutes from './routes/reportRoutes';
+import serviceRatingRoutes from './routes/serviceRatingRoutes';  // Nueva ruta añadida
+import serviceRatingLinkRoutes from './routes/serviceRatingLinkRoutes';
 
 // Configurar dotenv
 dotenv.config();
@@ -40,6 +42,8 @@ app.use('/api/pending-services', pendingServiceRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/service-ratings', serviceRatingRoutes);  // Nueva ruta añadida
+app.use('/api/service-rating-links', serviceRatingLinkRoutes);  // Nueva ruta añadida
 
 // Ruta de prueba
 app.get('/', (req: Request, res: Response) => {
