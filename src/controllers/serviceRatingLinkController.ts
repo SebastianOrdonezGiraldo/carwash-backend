@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import * as ServiceRatingLinkService from '../services/serviceRatingLinkService';
 import * as PendingServiceModel from '../models/pendingService';
 
+// src/controllers/serviceRatingLinkController.ts
 export async function generateRatingLink(req: Request, res: Response) {
   try {
     const serviceId = Number(req.params.serviceId);
@@ -20,9 +21,9 @@ export async function generateRatingLink(req: Request, res: Response) {
     // Generar enlace de calificación
     const uniqueToken = await ServiceRatingLinkService.createServiceRatingLink(serviceId);
 
-    // Construir URL de calificación 
+    // Construir URL de calificación usando el token, no el serviceId
     const frontendUrl = process.env.FRONTEND_URL || 'https://vehicle-spruce-frontend.onrender.com';
-const ratingUrl = `${frontendUrl}/rate-service/${serviceId}`;
+    const ratingUrl = `${frontendUrl}/rate-service/${uniqueToken}`; // Cambiar serviceId por uniqueToken
 
     res.json({ 
       token: uniqueToken, 
