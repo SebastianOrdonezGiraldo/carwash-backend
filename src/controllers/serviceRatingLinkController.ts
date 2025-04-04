@@ -21,8 +21,8 @@ export async function generateRatingLink(req: Request, res: Response) {
     const uniqueToken = await ServiceRatingLinkService.createServiceRatingLink(serviceId);
 
     // Construir URL de calificación 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
-    const ratingUrl = `${frontendUrl}/rate-service/${uniqueToken}`;
+    const frontendUrl = process.env.FRONTEND_URL || 'https://vehicle-spruce-frontend.onrender.com';
+const ratingUrl = `${frontendUrl}/rate-service/${serviceId}`;
 
     res.json({ 
       token: uniqueToken, 
