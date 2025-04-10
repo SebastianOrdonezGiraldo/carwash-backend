@@ -35,33 +35,46 @@ export async function generateRatingLink(req: Request, res: Response) {
   }
 }
 
-export async function validateRatingLink(req: Request, res: Response) {
+export async function validateServiceRatingLink(token: string): Promise<number | null> {
   try {
-    const { token } = req.params;
+    console.log('Validando token en servicio:', token);
+    
+    const result = await query(
+      `SELECT service_id FROM service_rating_links 
+      WHERE unique_token = $1 
+      AND is_used = false 
+      AND expires_at > CURRENT_TIMESTAMP`,
+      [token]
+    );
 
-    // Validar token y obtener service_id
-    const serviceId = await ServiceRatingLinkService.validateServiceRatingLink(token);
+    console.log('Resultado de consulta de token:', result);
+    
+    if (result.length === 0) {
+      console.warn('No se encontró un token válido');
+      // Verificar si el token existe pero está usado o expirado
+      const existingToken = await query(
+        `SELECT service_id, is_used, expires_at FROM service_rating_links 
+        WHERE unique_token = $1`,
+        [token]
+      );
 
-    if (!serviceId) {
-      return res.status(404).json({ error: 'Enlace de calificación inválido o expirado' });
+      if (existingToken.length > 0) {
+        console.warn('Token existe pero está:', 
+          existingToken[0].is_used ? 'usado' : 'expirado',
+          'Expiración:', existingToken[0].expires_at
+        );
+      }
     }
 
-    // Obtener detalles del servicio
-    const service = await PendingServiceModel.getPendingServiceById(serviceId);
-
-    if (!service) {
-      return res.status(404).json({ error: 'Servicio no encontrado' });
-    }
-
-    // Devolver detalles básicos del servicio
-    res.json({
-      serviceId: service.service_id,
-      vehicleMake: service.make,
-      vehicleModel: service.model,
-      licensePlate: service.license_plate
-    });
+    return result.length > 0 ? result[0].service_id : null;
   } catch (error) {
-    console.error('Error al validar enlace de calificación:', error);
-    res.status(500).json({ error: 'Error al validar enlace de calificación' });
+    console.error('Error completo en validación de token:', error);
+    
+    if (error instanceof Error) {
+      console.error('Mensaje de error:', error.message);
+      console.error('Stack trace:', error.stack);
+    }
+    
+    return null;
   }
 }
