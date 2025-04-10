@@ -23,7 +23,7 @@ export async function generateRatingLink(req: Request, res: Response) {
 
     // Construir URL de calificación usando el token, no el serviceId
     const frontendUrl = process.env.FRONTEND_URL || 'https://vehicle-spruce-frontend.onrender.com';
-    const ratingUrl = `${frontendUrl}/rate-service/${uniqueToken}`; // Cambiar serviceId por uniqueToken
+    const ratingUrl = `${frontendUrl}/rate-service/${uniqueToken}`;
 
     res.json({ 
       token: uniqueToken, 
